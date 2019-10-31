@@ -13,7 +13,7 @@
   ],
   "author": "Yevhenii Onipko",
   "license": "MIT",
-  "peerDependencies": {
+  "dependencies": {
     "react-native": "^0.59.7"
   },
   "repository": {
