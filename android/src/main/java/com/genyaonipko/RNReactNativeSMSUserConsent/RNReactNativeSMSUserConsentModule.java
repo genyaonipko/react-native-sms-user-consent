@@ -8,20 +8,36 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.BaseActivityEventListener;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
 import com.google.android.gms.auth.api.phone.SmsRetriever;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+
+import static android.app.Activity.RESULT_OK;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 
 public class RNReactNativeSMSUserConsentModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
+    private Promise promise;
+    private SmsRetrieveBroadcastReceiver receiver;
+    private static final String E_OTP_ERROR = "E_OTP_ERROR";
+    private static final String RECEIVED_OTP_PROPERTY = "receivedOtpMessage";
+    public static final int SMS_CONSENT_REQUEST = 1244;
 
     public RNReactNativeSMSUserConsentModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -35,7 +51,7 @@ public class RNReactNativeSMSUserConsentModule extends ReactContextBaseJavaModul
     }
 
    @ReactMethod
-   public void listenOTP(Promise promise) {
+   public void listenOTP(final Promise promise) {
        unregisterReceiver();
 
        if (this.promise != null) {
