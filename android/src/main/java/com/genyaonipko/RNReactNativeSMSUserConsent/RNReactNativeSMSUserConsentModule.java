@@ -1,4 +1,3 @@
-
 package com.genyaonipko.RNReactNativeSMSUserConsent;
 
 import android.app.Activity;
@@ -10,6 +9,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 
 import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.BaseActivityEventListener;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -26,10 +26,7 @@ public class RNReactNativeSMSUserConsentModule extends ReactContextBaseJavaModul
     public RNReactNativeSMSUserConsentModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
-        reactContext.addActivityEventListener(activityEventListener);
-        SmsRetriever.getClient(reactContext).startSmsUserConsent(null);
-        IntentFilter intentFilter = new IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION);
-        reactContext.registerReceiver(smsVerificationReceiver, intentFilter);
+        reactContext.addActivityEventListener(mActivityEventListener);
     }
 
     @Override
@@ -37,68 +34,67 @@ public class RNReactNativeSMSUserConsentModule extends ReactContextBaseJavaModul
         return "RNReactNativeSMSUserConsent";
     }
 
-    private static final int SMS_CONSENT_REQUEST = 2;  // Set to an unused request code
-    private final BroadcastReceiver smsVerificationReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (SmsRetriever.SMS_RETRIEVED_ACTION.equals(intent.getAction())) {
-                Bundle extras = intent.getExtras();
-                Status smsRetrieverStatus = (Status) extras.get(SmsRetriever.EXTRA_STATUS);
+   @ReactMethod
+   public void listenOTP(Promise promise) {
+       unregisterReceiver();
 
-                switch (smsRetrieverStatus.getStatusCode()) {
-                    case CommonStatusCodes.SUCCESS:
-                        // Get consent intent
-                        Intent consentIntent = extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT);
-                        try {
-                            // Start activity to show consent dialog to user, activity must be started in
-                            // 5 minutes, otherwise you'll receive another TIMEOUT intent
-                            reactContext.startActivityForResult(consentIntent, SMS_CONSENT_REQUEST, null);
-                        } catch (ActivityNotFoundException e) {
-                            // Handle the exception ...
-                        }
-                        break;
-                    case CommonStatusCodes.TIMEOUT:
-                        // Time out occurred, handle the error.
-                        break;
-                }
+       if (this.promise != null) {
+           promise.reject(E_OTP_ERROR, new Error("Reject previous request"));
+       }
 
-            }
+       this.promise = promise;
+       Task<Void> task = SmsRetriever.getClient(reactContext.getCurrentActivity()).startSmsUserConsent(null);
+       task.addOnSuccessListener(new OnSuccessListener<Void>() {
+           @Override
+           public void onSuccess(Void aVoid) {
+               // successfully started an SMS Retriever for one SMS message
+               registerReceiver();
+           }
+       });
+       task.addOnFailureListener(new OnFailureListener() {
+           @Override
+           public void onFailure(@NonNull Exception e) {
+               promise.reject(E_OTP_ERROR, e);
+           }
+       });
+   }
+
+    @ReactMethod
+    public void removeOTPListener() {
+        unregisterReceiver();
+    }
+
+    private void registerReceiver() {
+        receiver = new SmsRetrieveBroadcastReceiver(reactContext.getCurrentActivity());
+        IntentFilter intentFilter = new IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION);
+        reactContext.getCurrentActivity().registerReceiver(receiver, intentFilter);
+    }
+
+    private void unregisterReceiver() {
+        if (receiver != null) {
+            reactContext.getCurrentActivity().unregisterReceiver(receiver);
+            receiver = null;
         }
-    };
+    }
 
-    private final ActivityEventListener activityEventListener = new ActivityEventListener() {
+    private final ActivityEventListener mActivityEventListener = new BaseActivityEventListener() {
         @Override
-        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent intent) {
             switch (requestCode) {
-                // ...
                 case SMS_CONSENT_REQUEST:
-                    if (resultCode == Activity.RESULT_OK) {
+                    unregisterReceiver();
+                    if (resultCode == RESULT_OK) {
                         // Get SMS message content
-                        String message = data.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE);
-                        // Extract one-time code from the message and complete verification
-                        // `sms` contains the entire text of the SMS message, so you will need
-                        // to parse the string.
-//                        String oneTimeCode = parseOneTimeCode(message); // define this function
-
-                        // send one time code to the server
+                        String message = intent.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE);
+                        WritableMap map = Arguments.createMap();
+                        map.putString(RECEIVED_OTP_PROPERTY, message);
+                        promise.resolve(map);
                     } else {
-                        // Consent canceled, handle the error ...
+                        promise.reject(E_OTP_ERROR, new Error("Result code: " + resultCode));
                     }
+                    promise = null;
                     break;
             }
         }
     };
-
-    @ReactMethod
-    public void getOneTimeCode(Callback callback) {
-        String data = smsVerificationReceiver.getResultData();
-        int resultCode = smsVerificationReceiver.getResultCode();
-        if (resultCode == Activity.RESULT_OK) {
-            // Get SMS message content
-            String message = data;
-            callback.invoke(null, message);
-        } else {
-            callback.invoke(0, null);
-        }
-    }
 }
