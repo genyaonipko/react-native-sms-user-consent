@@ -39,9 +39,9 @@ $ cd ios/ && pod install
 ### User Flow for SMS User Consent API
 
 <div style="display: flex; flex-direction: row; flex-wrap: nowrap;">
-<img src="/assets/images/user-consent-1.png" width=200 height="350" />
-<img src="/assets/images/user-consent-2.png" width=200 height="350" />
-<img src="/assets/images/user-consent-3.png" width=200 height="350" />
+<img src="/assets/images/user-consent-1.png" width=200 height="390" />
+<img src="/assets/images/user-consent-2.png" width=200 height="390" />
+<img src="/assets/images/user-consent-3.png" width=200 height="390" />
 </div>
 
 
