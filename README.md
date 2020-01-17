@@ -36,6 +36,12 @@ $ cd ios/ && pod install
 
 ## Usage
 
+### User Flow for SMS User Consent API
+
+![user-consent-1](./assets/images/user-consent-1.png)
+![user-consent-1](./assets/images/user-consent-2.png)
+![user-consent-3](./assets/images/user-consent-3.png)
+
 ### Import
 
 ```js
