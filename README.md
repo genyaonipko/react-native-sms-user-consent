@@ -27,12 +27,13 @@ $ yarn add react-native-sms-user-consent
 $ react-native link react-native-sms-user-consent
 ```
 
-
-*Note* For `iOS` using `cocoapods`, run:
-
-```bash
-$ cd ios/ && pod install
+## Install dependencies
+Include the Play Services auth component in your app's build.gradle file:
 ```
+implementation 'com.google.android.gms:play-services-auth:17.0.0'
+implementation 'com.google.android.gms:play-services-auth-api-phone:17.4.0'
+```
+
 
 ## Usage
 
